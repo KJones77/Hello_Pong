@@ -1,5 +1,6 @@
 import pygame
 import os
+
 from pong_character import pong_character
 
 # Game window constants
@@ -32,6 +33,13 @@ blue_bar.move_speed = blue_bar.height / 50
 
 blue_bar.resized_pong = pygame.transform.scale(blue_bar.image, (blue_bar.width, blue_bar.height))
 
+# game assets for ball
+BALL_SIDE = HEIGHT / 50
+BALL_SPEED = 5 #BALL_SIDE
+WHITE_BALL_IMAGE = pygame.image.load(os.path.join("Game_Assets", "white_ball.png"))
+BLUE_BALL_IMAGE = pygame.image.load(os.path.join("Game_Assets", "blue_ball.png"))
+RED_BALL_IMAGE = pygame.image.load(os.path.join("Game_Assets", "red_ball.png"))
+ball = pygame.transform.scale(WHITE_BALL_IMAGE, (BALL_SIDE, BALL_SIDE))
 
 # Color constants
 BLACK = (0, 0, 0)
@@ -40,12 +48,24 @@ RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 
 
-def draw_game(red_hitbox, blue_hitbox):
+def draw_game(red_hitbox, blue_hitbox, ball_hitbox, ball_color):
         GAME_WINDOW.fill(BLACK)
         pygame.draw.rect(GAME_WINDOW, WHITE, BORD_TOP)
         pygame.draw.rect(GAME_WINDOW, WHITE, BORD_BOT)
+        pygame.draw.rect(GAME_WINDOW, WHITE, BORD_LEFT)
+        pygame.draw.rect(GAME_WINDOW, WHITE, BORD_RIGHT)
         GAME_WINDOW.blit(red_bar.resized_pong, (red_hitbox.x, red_hitbox.y))
         GAME_WINDOW.blit(blue_bar.resized_pong, (blue_hitbox.x, blue_hitbox.y))
+
+        if (ball_color == -1):
+            current_ball = pygame.transform.scale(BLUE_BALL_IMAGE, (BALL_SIDE, BALL_SIDE))
+        elif (ball_color == 1):
+            current_ball = pygame.transform.scale(RED_BALL_IMAGE, (BALL_SIDE, BALL_SIDE))
+        else:
+            current_ball = pygame.transform.scale(WHITE_BALL_IMAGE, (BALL_SIDE, BALL_SIDE))
+
+        GAME_WINDOW.blit(current_ball, (ball_hitbox.x, ball_hitbox.y))
+        
         pygame.display.update()
 
 # handles all movement for blue character
@@ -66,12 +86,39 @@ def red_movement(keys_input, red_character):
     elif keys_input[pygame.K_DOWN] and (red_character.y + blue_bar.move_speed < HEIGHT - BORD_SIZE - red_bar.height):
         red_character.y += red_bar.move_speed
 
+def ball_move(ball_hitbox, ball_direction, ball_col, blue_character, red_character):
+    # check if the ball collided with the left or right border
+    if ball_hitbox.colliderect(BORD_LEFT) or ball_hitbox.colliderect(BORD_RIGHT):
+        ball_direction[0] *= -1
+
+    # check if ball collided with the top or bottom border
+    if ball_hitbox.colliderect(BORD_TOP) or ball_hitbox.colliderect(BORD_BOT):
+        ball_direction[1] *= -1
+    
+    # check if the blue character collided with the ball
+    if ball_hitbox.colliderect(blue_character):
+        ball_direction[0] *= -1
+        ball_col = -1
+        
+    # check if the red character collided with the ball
+    elif ball_hitbox.colliderect(red_character):
+        ball_direction[0] *= -1
+        ball_col = 1
+
+    ball_hitbox.y += ball_direction[1] * BALL_SPEED
+    ball_hitbox.x += ball_direction[0] * BALL_SPEED
+
+    return ball_col
+
 
 def main():
     # initialize hitboxes for red and blue characters
     red_pong_hb = pygame.Rect(red_bar.spawn[0], red_bar.spawn[1], red_bar.width, red_bar.height)
     blue_pong_hb = pygame.Rect(blue_bar.spawn[0], blue_bar.spawn[1], blue_bar.width, blue_bar.height)
-    
+    ball_hb = pygame.Rect(WIDTH / 2 , HEIGHT / 2, BALL_SIDE, BALL_SIDE)
+    ball_direc = [-1, -1] # (horizontal, vertical)
+    ball_color = 0 # (ball color: -1 = blue, 0 = white, 1 = red)
+
     # start a clock that will help maintain the FPS
     game_clock = pygame.time.Clock()
 
@@ -86,17 +133,18 @@ def main():
             if (event.type == pygame.QUIT):
                 game_running = False
 
-            # get all keys being pressed
-            keys_input = pygame.key.get_pressed()
+        # get all keys being pressed
+        keys_input = pygame.key.get_pressed()
 
-            # move blue if needed
-            blue_movement(keys_input, blue_pong_hb)
-            # move red if needed
-            red_movement(keys_input, red_pong_hb)
+        # move blue if needed
+        blue_movement(keys_input, blue_pong_hb)
+        # move red if needed
+        red_movement(keys_input, red_pong_hb)
 
-            
+        # ball movement
+        ball_color = ball_move(ball_hb, ball_direc, ball_color, blue_pong_hb, red_pong_hb)  
         # draw the game board each loop
-        draw_game(red_pong_hb, blue_pong_hb)
+        draw_game(red_pong_hb, blue_pong_hb, ball_hb, ball_color)
 
     
     pygame.quit()
