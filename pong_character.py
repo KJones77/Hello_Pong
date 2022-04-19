@@ -9,4 +9,5 @@ class pong_character():
             self.spawn = (0, 0)
             self.move_speed = self.height / 10
             self.resized_pong = None
+            self.score = 0
         return None
